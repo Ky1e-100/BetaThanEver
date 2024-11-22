@@ -86,7 +86,7 @@ def detect_holds(image_path):
 
 def filter_holds(holds, target_class):
     filtered_holds = [hold for hold in holds if hold['class'] == target_class]
-    return filtered_holds
+    return sorted(filtered_holds, key=lambda x: x['center'][1], reverse=True) 
 
 def draw_holds(image_path, holds):
     image = cv2.imread(image_path)
@@ -95,10 +95,8 @@ def draw_holds(image_path, holds):
     box_colour = (0, 0, 255)
     box_thickness = 4
     label_colour = (255, 0, 0)
-
-    holds_sorted = sorted(holds, key=lambda x: x['center'][1], reverse=True)
     count = 1
-    for idx, hold in enumerate(holds_sorted, start=1):
+    for idx, hold in enumerate(holds, start=1):
         x1, y1, x2, y2 = map(int, hold['box'])
         cv2.rectangle(output_image, (x1, y1), (x2, y2), box_colour, box_thickness)
         label = str(count)
