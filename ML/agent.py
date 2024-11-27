@@ -9,6 +9,6 @@ class climber:
         # Center of body
         self.body_center = (0, height * 0.55)
         # User reach, vertical and horizontal
-        self.horizontal_reach = height / 2
+        self.horizontal_reach = height
         self.vertical_reach = height * 1.35
 

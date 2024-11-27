@@ -13,6 +13,30 @@ def euclidean_distance(pos1, pos2):
 def is_within_reach(node1, node2, reach_radius):
     return euclidean_distance(node1, node2) <= reach_radius
 
+def get_state_center(nodes, ids: tuple):
+    positions = []
+    for id in ids:
+        for node in nodes:
+            if node['id'] == id:
+                positions.append(tuple(node['center']))
+
+    x, y = 0, 0
+    for pos_x, pos_y in positions:
+        x += pos_x
+        y += pos_y
+
+    x /= len(positions)
+    y /= len(positions)
+
+    return x, y
+
+def get_heuristic(nodes, goal_node, start_state):
+    return euclidean_distance(tuple(get_state_center(nodes, tuple(start_state.values()))), goal_node['center'])
+
+def reconstruct_path(node):
+    node.parent.append(node.state)
+    return node.parent
+
 
 def generate_next_states(current_state, nodes, agent, goal_node):
     next_states = []
@@ -43,13 +67,21 @@ def generate_next_states(current_state, nodes, agent, goal_node):
             # Enforce constraints based on limb type
             if "hand" in limb:
 
+                # No crossing your arms >:(
+                other_hand = "left_hand" if limb == "right_hand" else "right_hand"
+                if other_hand == "left_hand": # The stationary one
+                    if target_node['center'][0] < hand_positions[other_hand]['center'][0]:
+                        continue
+                else:  # other_hand == "right_hand"
+                    if target_node['center'][0] > hand_positions[other_hand]['center'][0]:
+                        continue
+
                 # Check vertical reach (feet to hands)
                 lowest_foot = foot_positions["right_foot"] if foot_positions["right_foot"]['center'][1] < foot_positions["left_foot"]['center'][1] else foot_positions["left_foot"]
                 if abs(euclidean_distance(target_node['center'], lowest_foot['center'])) > max_vertical_reach:
                     continue
 
                 # Check horizontal reach (hand-to-hand)
-                other_hand = "left_hand" if limb == "right_hand" else "right_hand"
                 other_hand_pos = hand_positions[other_hand]['center']
                 if abs(euclidean_distance(target_node['center'], other_hand_pos)) > max_horizontal_reach:
                     continue
@@ -57,13 +89,13 @@ def generate_next_states(current_state, nodes, agent, goal_node):
             elif "foot" in limb:
                 # foot can't go above lowest hand
                 lowest_hand = hand_positions["right_hand"] if hand_positions["right_hand"]['center'][1] < hand_positions["left_hand"]['center'][1] else hand_positions["left_hand"]
-                if target_node['id'] >= lowest_hand['id']:
+                if target_node['center'][1] <= lowest_hand['center'][1]:
                     continue
 
                 # Check feet proximity (feet should not be too far apart)
                 other_foot = "left_foot" if limb == "right_foot" else "right_foot"
                 other_foot_pos = foot_positions[other_foot]['center']
-                if abs(euclidean_distance(target_node['center'], other_foot_pos)) > (max_vertical_reach / 2):
+                if abs(euclidean_distance(target_node['center'], other_foot_pos)) > (max_vertical_reach / 2):  # divide by 2 to shorten the distance the leg can go
                     continue
 
             # Add valid move
@@ -75,8 +107,7 @@ def generate_next_states(current_state, nodes, agent, goal_node):
     return next_states
 
 
-# Pathfinding with Steps (Updated to Prioritize Hands)
-def a_star_with_constraints(nodes, agent, start_state, goal_node_id):
+def a_star(nodes, agent, start_state, goal_node_id):
     goal_node = next(node for node in nodes if node['id'] == goal_node_id)
 
     # Priority queue for A*
@@ -104,31 +135,6 @@ def a_star_with_constraints(nodes, agent, start_state, goal_node_id):
 
     return None  # No path found
 
-
-def get_state_center(nodes, ids: tuple):
-    positions = []
-    for id in ids:
-        for node in nodes:
-            if node['id'] == id:
-                positions.append(tuple(node['center']))
-
-    x, y = 0, 0
-    for pos_x, pos_y in positions:
-        x += pos_x
-        y += pos_y
-
-    x /= len(positions)
-    y /= len(positions)
-
-    return x, y
-
-def get_heuristic(nodes, goal_node, start_state):
-    return euclidean_distance(tuple(get_state_center(nodes, tuple(start_state.values()))), goal_node['center'])
-
-def reconstruct_path(node):
-    return node.parent
-
-
 # Example Usage
 def find_path(nodes, agent):
     start_state = {
@@ -137,9 +143,9 @@ def find_path(nodes, agent):
         "right_foot": 1,  # Starting node for right foot
         "left_foot": 1  # Starting node for left foot
     }
-    goal_node_id = 15  # Goal node ID
+    goal_node_id = len(nodes)  # Goal node ID
 
-    steps = a_star_with_constraints(nodes, agent, start_state, goal_node_id)
+    steps = a_star(nodes, agent, start_state, goal_node_id)
 
     print(steps)
     print(len(steps))

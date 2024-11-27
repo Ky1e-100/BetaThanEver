@@ -113,14 +113,14 @@ def display_image(image, window_name='Image'):
 
 
 
-'''
+
 # Test
 if __name__ == "__main__":
-    image_path = '../dataset/test/test2.jpg'
+    image_path = '../dataset/test/test4.jpg'
     holds = detect_holds(image_path)
 
     # Filter holds by class if needed
-    target_class = "Pink"
+    target_class = "Purple"
     filtered_holds = filter_holds(holds, target_class)
 
     image = draw_holds(image_path, filtered_holds)
@@ -130,4 +130,3 @@ if __name__ == "__main__":
         print("Output image saved as 'output_image.jpg'")
 
 
-'''
