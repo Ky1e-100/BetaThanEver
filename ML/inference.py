@@ -8,13 +8,14 @@ from PIL import Image
 # Adjust the path to your YOLOv5 directory
 yolov5_path = os.path.join(os.path.dirname(__file__), "../yolov5")
 sys.path.append(yolov5_path)
+
 from models.common import DetectMultiBackend
 from utils.torch_utils import select_device
 from utils.general import non_max_suppression, scale_boxes
 
 device = select_device('0' if torch.cuda.is_available() else 'cpu')
 
-model_path = 'ML/Model/best.pt' 
+model_path = 'Model/best.pt'
 model = DetectMultiBackend(model_path, device=device)
 model.eval()
 
@@ -110,9 +111,12 @@ def display_image(image, window_name='Image'):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+
+
+'''
 # Test
 if __name__ == "__main__":
-    image_path = 'dataset/test/test2.jpg'
+    image_path = '../dataset/test/test2.jpg'
     holds = detect_holds(image_path)
 
     # Filter holds by class if needed
@@ -124,3 +128,6 @@ if __name__ == "__main__":
         # display_image(image)
         cv2.imwrite('output_image.jpg', image)
         print("Output image saved as 'output_image.jpg'")
+
+
+'''
