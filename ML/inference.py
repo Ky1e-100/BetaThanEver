@@ -110,6 +110,18 @@ def display_image(image, window_name='Image'):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+def generate_image(image_path, target_class):
+    holds = detect_holds(image_path)
+
+    filtered_holds = filter_holds(holds, target_class)
+
+    image = draw_holds(image_path, filtered_holds)
+    if image is not None:
+        # display_image(image)
+        cv2.imwrite('output_image.jpg', image)
+        print("Output image saved as 'output_image.jpg'")
+    return image
+
 # Test
 if __name__ == "__main__":
     image_path = 'dataset/test/test2.jpg'
