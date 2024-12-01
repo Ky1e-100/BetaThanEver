@@ -23,6 +23,13 @@ puzzle_width = filtered_holds_by_x[0]['center'][0]
 print("Please input your height (in centimeters)")
 user_height = int(input())
 
+foot_hold_ids_str = input("Please enter the ids for the foot holds in the puzzle\n").split()
+foot_hold_ids = []
+for x in foot_hold_ids_str:
+    foot_hold_ids.append(int(x))
+
+print(foot_hold_ids)
+
 # Determine the users 'scaled' height to be in ratio with yolov5's units
 avg_wall_height = 500  # in cm, for ratios
 scaled_user_height = (user_height / avg_wall_height) * puzzle_height
@@ -30,6 +37,6 @@ scaled_user_height = (user_height / avg_wall_height) * puzzle_height
 # Create the agent
 climber = agent.climber(scaled_user_height)
 
-graph.find_path(filtered_holds_by_y, climber)
+graph.find_path(filtered_holds_by_y, climber, foot_hold_ids)
 
 
