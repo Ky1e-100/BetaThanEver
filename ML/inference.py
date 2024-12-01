@@ -116,10 +116,10 @@ def generate_image(image_path, target_class):
     filtered_holds = filter_holds(holds, target_class)
 
     image = draw_holds(image_path, filtered_holds)
-    if image is not None:
-        # display_image(image)
-        cv2.imwrite('output_image.jpg', image)
-        print("Output image saved as 'output_image.jpg'")
+    # if image is not None:
+    #     # display_image(image)
+    #     cv2.imwrite('output_image.jpg', image)
+    #     print("Output image saved as 'output_image.jpg'")
     return image
 
 # Test
