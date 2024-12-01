@@ -8,6 +8,9 @@ from tkinter import filedialog, messagebox, ttk
 sys.path.append(os.path.join(os.path.dirname(__file__), '../ML'))
 import inference as inf 
 
+sys.path.append(os.path.join(os.path.dirname(__file__), '../pathing'))
+import pathing
+
 class ClimbingPathGUI:
     def __init__(self, root):
         self.root = root
@@ -85,12 +88,48 @@ class ClimbingPathGUI:
         self.height_entry = tk.Entry(self.user_frame, width=6)
         self.height_entry.pack(side=tk.LEFT, padx=5)
         
+        self.LH_label = tk.Label(
+            self.user_frame,
+            text="LH",
+            font=("Arial, 12")
+        )
+        self.LH_label.pack(side=tk.LEFT, padx=5)
+        self.LH_entry = tk.Entry(self.user_frame, width=3)
+        self.LH_entry.pack(side=tk.LEFT, padx=5)
+        
+        self.RH_label = tk.Label(
+            self.user_frame,
+            text="RH",
+            font=("Arial, 12")
+        )
+        self.RH_label.pack(side=tk.LEFT, padx=5)
+        self.RH_entry = tk.Entry(self.user_frame, width=3)
+        self.RH_entry.pack(side=tk.LEFT, padx=5)
+        
+        self.LF_label = tk.Label(
+            self.user_frame,
+            text="LF",
+            font=("Arial, 12")
+        )
+        self.LF_label.pack(side=tk.LEFT, padx=5)
+        self.LF_entry = tk.Entry(self.user_frame, width=3)
+        self.LF_entry.pack(side=tk.LEFT, padx=5)
+        
+        self.RF_label = tk.Label(
+            self.user_frame,
+            text="RF",
+            font=("Arial, 12")
+        )
+        self.RF_label.pack(side=tk.LEFT, padx=5)
+        self.RF_entry = tk.Entry(self.user_frame, width=3)
+        self.RF_entry.pack(side=tk.LEFT, padx=5)
+        
         
         # Generate Steps Button
         self.upload_button = tk.Button(
             self.controls_frame,
             text="Generate Steps",
-            command=self.upload_image,
+            command=self.generate_steps,
             font=("Arial", 14)
         )
         self.upload_button.pack(side=tk.LEFT, padx=10)
@@ -129,6 +168,8 @@ class ClimbingPathGUI:
         self.processed_photo_image = None
         self.processed_image_np = None
         self.image_path = None
+        self.holds = None
+        self.target_class = None
 
     def upload_image(self):
         file_path = filedialog.askopenfilename(
@@ -145,10 +186,10 @@ class ClimbingPathGUI:
             messagebox.showerror("Error", "No image uploaded. Please upload an image first.")
             return
 
-        target_class = self.class_dropdown.get()
+        self.target_class = self.class_dropdown.get()
 
         try:
-            processed_image = inf.generate_image(self.image_path, target_class)
+            processed_image = inf.generate_image(self.image_path, self.target_class)
             if processed_image is not None:
                 self.processed_image_np = processed_image
                 
@@ -159,24 +200,7 @@ class ClimbingPathGUI:
 
                 self.processed_canvas.delete("all")
                 self.processed_canvas.create_image(290, 300, image=self.processed_photo_image, anchor=tk.CENTER)
-
-                # holds = inf.filter_holds(inf.detect_holds(self.image_path), target_class)
-                # if holds:
-                #     self.text_field.delete("1.0", tk.END)  # Clear previous text
-                #     for idx, hold in enumerate(holds, start=1):
-                #         box = hold['box']
-                #         confidence = hold['confidence']
-                #         class_name = hold['class']
-                #         self.text_field.insert(
-                #             tk.END,
-                #             f"Hold {idx}:\n"
-                #             f"  Class: {class_name}\n"
-                #             f"  Confidence: {confidence:.2f}\n"
-                #             f"  Bounding Box: {box}\n\n"
-                #         )
-                # else:
-                #     self.text_field.delete("1.0", tk.END)
-                #     self.text_field.insert(tk.END, "No holds detected for the selected class.")
+                self.holds = inf.filter_holds(inf.detect_holds(self.image_path), self.target_class)
             else:
                 messagebox.showerror("Error", "Failed to process the image.")
         except Exception as e:
@@ -187,6 +211,30 @@ class ClimbingPathGUI:
         ratio = min(max_width / original_width, max_height / original_height)
         new_size = (int(original_width * ratio), int(original_height * ratio))
         return pil_image.resize(new_size)
+    
+    def generate_steps(self):
+        start_state = {
+            "right_hand": int(self.RH_entry.get()),
+            "left_hand": int(self.LH_entry.get()),
+            "right_foot": int(self.RF_entry.get()),
+            "left_foot": int(self.LF_entry.get())
+        }
+        
+        steps = pathing.path(self.holds, self.height_entry.get(), self.foot_id_entry.get(), self.target_class, start_state)
+        
+        if steps:
+            self.text_field.delete("1.0", tk.END)  
+            count = 0
+            for step in steps:
+                self.text_field.insert(
+                    tk.END,
+                    'Step ' + str(count) + ': ' + step + '\n'
+                )
+                count += 1
+        else:
+            self.text_field.delete("1.0", tk.END)
+            self.text_field.insert(tk.END, "Unable to determine steps")
+
 
 def main():
     root = tk.Tk()
