@@ -143,7 +143,7 @@ class ClimbingPathGUI:
             self.display_frame,
             bg='gray',
             width=800,
-            height=900
+            height=750
         )
         self.processed_canvas.pack(side=tk.LEFT, padx=10, pady=10, fill=tk.BOTH, expand=True)
 
@@ -195,11 +195,11 @@ class ClimbingPathGUI:
                 
                 processed_image_rgb = cv2.cvtColor(processed_image, cv2.COLOR_BGR2RGB)
                 pil_image = Image.fromarray(processed_image_rgb)
-                pil_image = self.resize_image_with_aspect_ratio(pil_image, 800, 900)
+                pil_image = self.resize_image_with_aspect_ratio(pil_image, 800, 750)
                 self.processed_photo_image = ImageTk.PhotoImage(pil_image)
 
                 self.processed_canvas.delete("all")
-                self.processed_canvas.create_image(290, 300, image=self.processed_photo_image, anchor=tk.CENTER)
+                self.processed_canvas.create_image(400, 375, image=self.processed_photo_image, anchor=tk.CENTER)
                 self.holds = inf.filter_holds(inf.detect_holds(self.image_path), self.target_class)
             else:
                 messagebox.showerror("Error", "Failed to process the image.")

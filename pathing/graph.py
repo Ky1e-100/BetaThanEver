@@ -55,11 +55,11 @@ def print_moves(steps: list):  # Expecting a list of dictionaries
 
 def generate_next_states(current_state, nodes, agent, goal_node, foot_hold_ids):
     next_states = []
-    limbs = {"right_hand", "left_hand", "right_foot", "left_foot"}
+    limbs = ["right_hand", "left_hand", "right_foot", "left_foot"]
 
     # Parameters for reachability
     max_vertical_reach = agent.vertical_reach  # Feet to hands max distance
-    max_horizontal_reach = agent.horizontal_reach * 0.75  # Hand-to-hand max horizontal distance
+    max_horizontal_reach = agent.horizontal_reach * 0.8  # Hand-to-hand max horizontal distance
 
     # Get current positions
     hand_positions = {
@@ -70,6 +70,10 @@ def generate_next_states(current_state, nodes, agent, goal_node, foot_hold_ids):
         "right_foot": next(node for node in nodes if node['id'] == current_state.state["right_foot"]),
         "left_foot": next(node for node in nodes if node['id'] == current_state.state["left_foot"])
     }
+
+    # Determine the lowest hand position (largest y if y increases downward)
+    lowest_hand_y = max(hand_positions["right_hand"]['center'][1],
+                       hand_positions["left_hand"]['center'][1])
 
     for limb in limbs:
         current_node_id = current_state.state[limb]
@@ -82,81 +86,105 @@ def generate_next_states(current_state, nodes, agent, goal_node, foot_hold_ids):
             # Enforce constraints based on limb type
             if "hand" in limb:
 
-                # If the current node is a foot hold, skip it
+                # If the target hold is a foot hold, skip it
                 if target_node['id'] in foot_hold_ids:
                     continue
 
-                # No crossing your arms >:(
+                # Prevent crossing arms
                 other_hand = "left_hand" if limb == "right_hand" else "right_hand"
-                if other_hand == "left_hand": # The stationary one
+                if limb == "right_hand":
+                    # Right hand should be to the right of left hand
                     if target_node['center'][0] < hand_positions[other_hand]['center'][0]:
                         continue
-                else:  # other_hand == "right_hand"
+                else:
+                    # Left hand should be to the left of right hand
                     if target_node['center'][0] > hand_positions[other_hand]['center'][0]:
                         continue
 
-                # Check vertical reach (feet to hands)
+                # Check vertical reach (from feet to hands)
                 lowest_foot = foot_positions["right_foot"] if foot_positions["right_foot"]['center'][1] < foot_positions["left_foot"]['center'][1] else foot_positions["left_foot"]
-                if abs(euclidean_distance(target_node['center'], lowest_foot['center'])) > max_vertical_reach * 0.8:
+                if euclidean_distance(target_node['center'], lowest_foot['center']) > max_vertical_reach:
                     continue
 
                 # Check horizontal reach (hand-to-hand)
                 other_hand_pos = hand_positions[other_hand]['center']
-                if abs(euclidean_distance(target_node['center'], other_hand_pos)) > max_horizontal_reach:
+                if euclidean_distance(target_node['center'], other_hand_pos) > max_horizontal_reach:
                     continue
+
+                # Assign lower movement cost for hands
+                move_cost = 1
 
             elif "foot" in limb:
 
                 other_foot = "left_foot" if limb == "right_foot" else "right_foot"
 
-                # if the hold is a foot hold, and the other foot is on that hold, skip
+                # If the target hold is a foot hold and the other foot is already on it, skip
                 if target_node['id'] in foot_hold_ids and foot_positions[other_foot]['id'] == target_node['id']:
                     continue
 
-                # If a hand is on the hold, ignore
-                hands = []
-                for hand in hand_positions.keys():
-                    if target_node['id'] == hand_positions[hand]['id']:
-                        hands.append(hand_positions[hand]['id'])
-
+                # Prevent feet from occupying the same hold as hands
+                hands = [hand_positions["right_hand"]['id'], hand_positions["left_hand"]['id']]
                 if target_node['id'] in hands:
                     continue
 
-                # No criss-cross apple sauce
-                if other_foot == "left_foot":  # The stationary one
-                    if target_node['center'][0] < foot_positions[other_foot]['center'][0]:
+                # Prevent criss-crossing feet
+                if limb == "right_foot":
+                    # Right foot should be to the right of left foot
+                    if target_node['center'][0] < foot_positions["left_foot"]['center'][0]:
                         continue
-                else:  # other_hand == "right_foot"
-                    if target_node['center'][0] > foot_positions[other_foot]['center'][0]:
+                else:
+                    # Left foot should be to the left of right foot
+                    if target_node['center'][0] > foot_positions["right_foot"]['center'][0]:
                         continue
 
-                # foot can't go above center point
-                lowest_hand = hand_positions["right_hand"] if hand_positions["right_hand"]['center'][1] < hand_positions["left_hand"]['center'][1] else hand_positions["left_hand"]
-                center_point = get_state_center(nodes, tuple(current_state.state.values()))
-                if target_node['center'][1] >= center_point[1] + agent.torso_length:  # Increased the distance by the length of the users torso
-                    continue                                                            # This will provide more of a buffer
+                # Calculate the maximum allowed y-coordinate for the foot
+                max_foot_y = lowest_hand_y + 0.4 * agent.height
+
+                if target_node['center'][1] < max_foot_y:
+                    continue
 
                 # Check feet proximity (feet should not be too far apart)
                 other_foot_pos = foot_positions[other_foot]['center']
-                if abs(euclidean_distance(target_node['center'], other_foot_pos)) > (max_vertical_reach / 2):  # divide by 2 to shorten the distance the leg can go
+                if euclidean_distance(target_node['center'], other_foot_pos) > (max_vertical_reach / 2):
                     continue
+
+                move_cost = 3
+
+            else:
+                continue 
 
             # Add valid move
             limb_positions = deepcopy(current_state.state)
             limb_positions[limb] = target_node['id']
             new_state = None
-            # Different heuristic for hands and feet
+
+            # Define heuristic based on limb type
             if "hand" in limb:
-                new_state = state.Node(F=0, g=current_state.g + 1,
-                                       h=euclidean_distance(target_node['center'], goal_node['center']),
-                                       state=limb_positions, parent=deepcopy(current_state.parent))
-            if "foot" in limb:
-                new_state = state.Node(F=0, g=current_state.g + 1,
-                                       h=euclidean_distance(target_node['center'], get_state_center(nodes, tuple(limb_positions.values()))),
-                                       state=limb_positions, parent=deepcopy(current_state.parent))
+                h = euclidean_distance(target_node['center'], goal_node['center'])
+            elif "foot" in limb:
+                h = min(
+                    euclidean_distance(target_node['center'], hand_positions["right_hand"]['center']),
+                    euclidean_distance(target_node['center'], hand_positions["left_hand"]['center'])
+                )
+
+            # Calculate g(n) and f(n)
+            g = current_state.g + move_cost
+            f = g + h
+
+            new_state = state.Node(
+                F=f,
+                g=g,
+                h=h,
+                state=limb_positions,
+                parent=deepcopy(current_state.parent)
+            )
             new_state.parent.append(current_state.state)
             next_states.append(new_state)
+
     return next_states
+
+
+
 
 
 def a_star(nodes, agent, start_state, goal_node_id, foot_hold_ids):

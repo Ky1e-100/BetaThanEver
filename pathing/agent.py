@@ -5,7 +5,7 @@ class climber:
         # User arm, leg length
         self.leg_length = height * 0.45
         self.arm_length = height * 0.35
-        self.torso_length = height * 0.30
+        self.torso_length = height * 0.35
         # Center of body
         self.body_center = (0, height * 0.55)
         # User reach, vertical and horizontal
